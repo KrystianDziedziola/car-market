@@ -1,7 +1,7 @@
 package carmarket;
 
-import carmarket.buyer.BuyCarRequest;
-import carmarket.buyer.CarBuyerAgent;
+import carmarket.buyer.BuyRequest;
+import carmarket.buyer.BuyerAgent;
 import carmarket.car.BodyType;
 import carmarket.car.Brand;
 import carmarket.car.FuelType;
@@ -35,19 +35,19 @@ public class Main {
     }
 
     private static void createBuyers(AgentContainer mainContainer) {
-        final List<BuyCarRequest> buyer1Requests = Arrays.asList(
+        final List<BuyRequest> buyer1Requests = Arrays.asList(
                 carRequestWithBrand(Brand.BMW),
                 carRequestWithBrand(Brand.VOLKSWAGEN),
                 carRequestWithBrand(Brand.MERCEDES)
         );
 
-        final List<BuyCarRequest> buyer2Requests = Arrays.asList(
+        final List<BuyRequest> buyer2Requests = Arrays.asList(
                 carRequestWithEngineType(FuelType.GASOLINE),
                 carRequestWithEngineType(FuelType.GASOLINE),
                 carRequestWithEngineType(FuelType.DIESEL)
         );
 
-        final List<BuyCarRequest> buyer3Requests = Arrays.asList(
+        final List<BuyRequest> buyer3Requests = Arrays.asList(
                 carRequestWithBody(BodyType.HATCHBACK),
                 carRequestWithBody(BodyType.SUV),
                 carRequestWithBody(BodyType.SEDAN)
@@ -56,22 +56,22 @@ public class Main {
         createBuyers(mainContainer, Arrays.asList(buyer1Requests, buyer2Requests, buyer3Requests));
     }
 
-    private static BuyCarRequest carRequestWithBrand(Brand fiat) {
-        return BuyCarRequest
+    private static BuyRequest carRequestWithBrand(Brand fiat) {
+        return BuyRequest
                 .builder()
                 .brands(Collections.singletonList(fiat))
                 .build();
     }
 
-    private static BuyCarRequest carRequestWithEngineType(FuelType gasoline) {
-        return BuyCarRequest
+    private static BuyRequest carRequestWithEngineType(FuelType gasoline) {
+        return BuyRequest
                 .builder()
                 .fuelTypes(Collections.singletonList(gasoline))
                 .build();
     }
 
-    private static BuyCarRequest carRequestWithBody(BodyType hatchback) {
-        return BuyCarRequest
+    private static BuyRequest carRequestWithBody(BodyType hatchback) {
+        return BuyRequest
                 .builder()
                 .bodyTypes(Collections.singletonList(hatchback))
                 .build();
@@ -93,13 +93,13 @@ public class Main {
     }
 
     private static void createBuyers(final AgentContainer container,
-                                     final List<List<BuyCarRequest>> buyerRequests) {
+                                     final List<List<BuyRequest>> buyerRequests) {
         try {
             for (int agentNumber = 1; agentNumber <= buyerRequests.size(); agentNumber++) {
                 final Object[] arguments = {agentNumber, buyerRequests.get(agentNumber-1)};
                 final String nickname = "Buyer: " + agentNumber;
                 container
-                        .createNewAgent(nickname, CarBuyerAgent.class.getName(), arguments)
+                        .createNewAgent(nickname, BuyerAgent.class.getName(), arguments)
                         .start();
             }
         } catch (final Exception e) {

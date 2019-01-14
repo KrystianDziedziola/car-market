@@ -10,12 +10,12 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-@AllArgsConstructor()
+@AllArgsConstructor
 @EqualsAndHashCode
 @Getter
 @Builder
 @ToString
-public class BuyCarRequest implements Serializable {
+public class BuyRequest implements Serializable {
 
 	private List<Brand> brands;
 	private List<String> models;

@@ -22,14 +22,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-public class CarBuyerAgent extends Agent {
-
+public class BuyerAgent extends Agent {
 
     private static final int AGENT_NUMBER_ARGUMENT_INDEX = 0;
     private static final int BUY_REQUESTS_ARGUMENT_INDEX = 1;
 
     @Getter
-    private List<BuyCarRequest> buyCarRequests = new ArrayList<>();
+    private List<BuyRequest> buyRequests = new ArrayList<>();
     @Getter
     private int agentNumber;
     private AID[] sellerAgents;
@@ -42,14 +41,14 @@ public class CarBuyerAgent extends Agent {
         final Object[] args = getArguments();
         if (args.length > 0) {
             this.agentNumber = (int) args[AGENT_NUMBER_ARGUMENT_INDEX];
-            this.buyCarRequests = (List<BuyCarRequest>) args[BUY_REQUESTS_ARGUMENT_INDEX];
+            this.buyRequests = (List<BuyRequest>) args[BUY_REQUESTS_ARGUMENT_INDEX];
 
         }
         final int interval = 5000;
         addBehaviour(new TickerBehaviour(this, interval) {
             @Override
             protected void onTick() {
-                if (buyCarRequests.stream()
+                if (buyRequests.stream()
                         .anyMatch(carBuyRequest -> !carBuyRequest.isProcessing())) {
                     Printer.print(getAID().getLocalName() + "Is looking for offers");
                     final DFAgentDescription template = new DFAgentDescription();
@@ -64,30 +63,17 @@ public class CarBuyerAgent extends Agent {
                             sellerAgents[i] = result[i].getName();
                             Printer.print(sellerAgents[i].getLocalName());
                         }
-                    } catch (final FIPAException fe) {
-                        fe.printStackTrace();
+                    } catch (final Exception e) {
+                        e.printStackTrace();
                     }
-                    Printer.print(getAID().getLocalName() + ": Begins...\n\n");
+                    Printer.print(getAID().getLocalName() + "is startingn\n");
 
-                    buyCarRequests.stream().filter(carBuyRequest -> !carBuyRequest.isProcessing())
+                    buyRequests.stream().filter(carBuyRequest -> !carBuyRequest.isProcessing())
                             .forEach(carBuyRequest -> {
-                                myAgent.addBehaviour(new CarBuyerAgent.RequestPerformer(carBuyRequest));
+                                myAgent.addBehaviour(new BuyerAgent.RequestPerformer(carBuyRequest));
                                 carBuyRequest.setProcessing(true);
                             });
                 }
-            }
-        });
-    }
-
-    public void updateClientRequests(final List<BuyCarRequest> requests) {
-        addBehaviour(new OneShotBehaviour() {
-            @Override
-            public void action() {
-                buyCarRequests = requests;
-                final StringBuilder stringBuilder = new StringBuilder();
-                stringBuilder.append(getAID().getLocalName()).append(": Kryteria wyszukiwan:\n");
-                buyCarRequests.forEach(carBuyRequest -> stringBuilder.append(buyCarRequests));
-                Printer.print(stringBuilder.toString());
             }
         });
     }
@@ -104,12 +90,12 @@ public class CarBuyerAgent extends Agent {
         private int repliesCount = 0;
         private MessageTemplate mt;
         private BuyerSteps step = BuyerSteps.SEARCH;
-        private BuyCarRequest buyCarRequest;
+        private BuyRequest buyRequest;
         private Car bestOffer;
         private static final String CONVERSATION_ID = "carmarket.car-trade";
 
-        RequestPerformer(final BuyCarRequest buyCarRequest) {
-            this.buyCarRequest = buyCarRequest;
+        RequestPerformer(final BuyRequest buyRequest) {
+            this.buyRequest = buyRequest;
         }
 
         @Override
@@ -121,7 +107,7 @@ public class CarBuyerAgent extends Agent {
                         cfp.addReceiver(sellerAgent);
                     }
                     try {
-                        cfp.setContentObject(buyCarRequest);
+                        cfp.setContentObject(buyRequest);
                         cfp.setConversationId(CONVERSATION_ID);
                         cfp.setReplyWith("cfp" + System.currentTimeMillis());
                         myAgent.send(cfp);
@@ -226,7 +212,7 @@ public class CarBuyerAgent extends Agent {
                                     + bestPrice + " od " + confirmBuyReply
                                     .getSender().getLocalName() + "\n" + bestOffer.toString());
 
-                            buyCarRequests.remove(buyCarRequest);
+                            buyRequests.remove(buyRequest);
                         } else if (confirmBuyReply.getPerformative() == ACLMessage.FAILURE) {
                             if (confirmBuyReply.getContent().equals("reserved")) {
                                 Printer.print(getAID().getLocalName()
@@ -251,14 +237,14 @@ public class CarBuyerAgent extends Agent {
         @Override
         public boolean done() {
             if (step == BuyerSteps.OFFER_REPLY && bestSeller == null) {
-                buyCarRequest.setProcessing(false);
+                buyRequest.setProcessing(false);
 
                 Printer.print(
                         getAID().getLocalName() + ": Nie ma w sprzedazy dla parametrow\n"
-                                + buyCarRequest.toString());
+                                + buyRequest.toString());
                 return true;
             } else if (step == BuyerSteps.END_SUCCESSFUL || step == BuyerSteps.END_ERROR) {
-                buyCarRequest.setProcessing(false);
+                buyRequest.setProcessing(false);
                 return true;
             }
 
