@@ -21,9 +21,7 @@ Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 Boston, MA  02111-1307, USA.
 *****************************************************************/
 
-package example;
-
-import jade.core.AID;
+package agents.old.example;
 
 import java.awt.*;
 import java.awt.event.*;

@@ -10,9 +10,7 @@ import java.time.ZonedDateTime;
 @Getter
 public class Reservation {
 
-	private String buyerName;
+	private String buyer;
 	private Car car;
-	private ZonedDateTime endTime;
-
-
+	private ZonedDateTime expirationDate;
 }

@@ -17,7 +17,7 @@ import java.util.List;
 
 public class Main {
 
-    private static final int NUMBER_OF_SELLER_AGENTS = 10;
+    private static final int NUMBER_OF_SELLER_AGENTS = 5;
 
     public static void main(final String[] args) throws Exception {
         final AgentContainer mainContainer = runApplication();
