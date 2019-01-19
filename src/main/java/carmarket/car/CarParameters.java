@@ -7,10 +7,9 @@ import java.math.BigDecimal;
 
 @AllArgsConstructor
 @Getter
-class CarModel {
+class CarParameters {
 
 	private Brand brand;
-	private String model;
 	private Double engineCapacity;
 	private Integer minProductionYear;
 	private Integer maxProductionYear;

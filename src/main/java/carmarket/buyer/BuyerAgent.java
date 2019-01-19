@@ -13,7 +13,6 @@ import jade.lang.acl.ACLMessage;
 import jade.lang.acl.MessageTemplate;
 import lombok.Getter;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.util.LinkedList;
@@ -27,7 +26,7 @@ import static carmarket.shared.Constants.CONVERSATION_ID;
 public class BuyerAgent extends Agent {
 
     private static final int STARTING_BALANCE = 100_000;
-    private static final int INTERVAL = 1_000;
+    private static final int INTERVAL = 5_000;
 
     private static final int AGENT_NUMBER_ARGUMENT_INDEX = 0;
     private static final int BUY_REQUESTS_ARGUMENT_INDEX = 1;
@@ -42,7 +41,7 @@ public class BuyerAgent extends Agent {
 
     @Override
     protected void setup() {
-        Printer.print(getAID().getLocalName() + ": Has been initialized.\n");
+        Printer.print(getAID().getLocalName() + ": Has been initialized wiht balance: " + balance + ".\n");
         final Object[] args = getArguments();
         this.agentNumber = (int) args[AGENT_NUMBER_ARGUMENT_INDEX];
         this.buyRequests = new LinkedList<>((List<BuyRequest>) args[BUY_REQUESTS_ARGUMENT_INDEX]);
@@ -59,7 +58,8 @@ public class BuyerAgent extends Agent {
 
                     try {
                         final DFAgentDescription[] result = DFService.search(myAgent, createTemplate());
-                        printFoundSellers(result);
+
+                        addSellers(result);
                     } catch (final Exception e) {
                         e.printStackTrace();
                     }
@@ -80,6 +80,20 @@ public class BuyerAgent extends Agent {
         };
     }
 
+    private DFAgentDescription createTemplate() {
+        final DFAgentDescription template = new DFAgentDescription();
+        final ServiceDescription serviceDescription = new ServiceDescription();
+        serviceDescription.setType(SERVICE_DESCRIPTION);
+        template.addServices(serviceDescription);
+        return template;
+    }
+
+    private void addSellers(DFAgentDescription[] result) {
+        sellerAgents = new AID[result.length];
+        IntStream.range(0, result.length)
+                .forEach(resultNumber -> sellerAgents[resultNumber] = result[resultNumber].getName());
+    }
+
     private Predicate<BuyRequest> isUnprocessed() {
         return request -> !request.isProcessing();
     }
@@ -88,26 +102,6 @@ public class BuyerAgent extends Agent {
         return buyRequests
                 .stream()
                 .anyMatch(isUnprocessed());
-    }
-
-    private void printFoundSellers(DFAgentDescription[] result) {
-        Printer.print(getAID().getLocalName() + " found following sellers:");
-
-        sellerAgents = new AID[result.length];
-        IntStream
-                .range(0, result.length)
-                .forEach(resultNumber -> {
-                    sellerAgents[resultNumber] = result[resultNumber].getName();
-                    Printer.print(sellerAgents[resultNumber].getLocalName());
-                });
-    }
-
-    private DFAgentDescription createTemplate() {
-        final DFAgentDescription template = new DFAgentDescription();
-        final ServiceDescription serviceDescription = new ServiceDescription();
-        serviceDescription.setType(SERVICE_DESCRIPTION);
-        template.addServices(serviceDescription);
-        return template;
     }
 
     @Override
@@ -180,6 +174,55 @@ public class BuyerAgent extends Agent {
             return aclMessage;
         }
 
+        private void getOffer() {
+            final ACLMessage searchReply = myAgent.receive(messageTemplate);
+            if (searchReply != null) {
+                if (matches(searchReply, ACLMessage.PROPOSE)) {
+                    try {
+                        final Car carProposal = (Car) searchReply.getContentObject();
+                        final BigDecimal price = createPrice(carProposal);
+                        if (bestSellerAid == null || price.compareTo(bestPrice) < 0) {
+                            bestPrice = price;
+                            bestSellerAid = searchReply.getSender();
+                            bestOffer = carProposal;
+                        }
+                    } catch (final Exception e) {
+                        e.printStackTrace();
+                    }
+
+                }
+                repliesCount++;
+                if (hasMoreRepliesThanSellers()) {
+                    currentBuyingStep = BuyingStages.REPLYING_TO_OFFERS;
+                }
+            } else {
+                block();
+            }
+        }
+
+        private void replyToOffer() {
+            final ACLMessage order = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
+            order.addReceiver(bestSellerAid);
+            try {
+                final String buyerName = getAID().getLocalName();
+                final String bestSellerName = bestSellerAid.getLocalName();
+
+                order.setContentObject(bestOffer);
+                order.setConversationId(CONVERSATION_ID);
+                order.setReplyWith("order" + System.currentTimeMillis());
+                Printer.print(MessageFormat.format("{0} is waiting for purchase acceptance from {1}.\n" +
+                        "Details: {2}\n\n", buyerName, bestSellerName, bestOffer));
+                myAgent.send(order);
+                messageTemplate = MessageTemplate
+                        .and(MessageTemplate.MatchConversationId(CONVERSATION_ID),
+                                MessageTemplate.MatchInReplyTo(order.getReplyWith()));
+                currentBuyingStep = BuyingStages.CONFIRMING_PURCHASE;
+            } catch (final Exception ex) {
+                ex.printStackTrace();
+                currentBuyingStep = BuyingStages.ERROR;
+            }
+        }
+
         private void confirmPurchase() {
             final String buyerName = getAID().getLocalName();
 
@@ -193,11 +236,13 @@ public class BuyerAgent extends Agent {
                             .getLocalName();
 
                     Printer.print(MessageFormat.format("Buyer: {0} bought a car from {1} for {2}. " +
-                                    "\nDetails: {3}",
+                                    "\nDetails: {3}\n",
                             buyerName,
                             sellerName,
                             bestPrice,
                             bestOffer));
+
+                    Printer.print(MessageFormat.format("{0}: balance is now: {1}\n\n", buyerName, balance));
 
                     buyRequests.remove(buyRequest);
                 } else if (matches(purchaseConfirmedMessage, ACLMessage.FAILURE)) {
@@ -225,7 +270,7 @@ public class BuyerAgent extends Agent {
 
                 if (matches(confirmReservation, ACLMessage.CONFIRM)) {
                     Printer.print(MessageFormat.format("{0} has reserved a car from {1}. " +
-                                    "\nDetails: {2}",
+                                    "\nDetails: {2}\n\n",
                             buyerName,
                             sellerName,
                             bestOffer
@@ -235,55 +280,6 @@ public class BuyerAgent extends Agent {
                     Printer.print(buyerName + ": Reservation failed");
                 }
                 currentBuyingStep = BuyingStages.FINALIZING;
-            } else {
-                block();
-            }
-        }
-
-        private void replyToOffer() {
-            final ACLMessage order = new ACLMessage(ACLMessage.ACCEPT_PROPOSAL);
-            order.addReceiver(bestSellerAid);
-            try {
-                final String buyerName = getAID().getLocalName();
-                final String bestSellerName = bestSellerAid.getLocalName();
-
-                order.setContentObject(bestOffer);
-                order.setConversationId(CONVERSATION_ID);
-                order.setReplyWith("order" + System.currentTimeMillis());
-                Printer.print(MessageFormat.format("{0} is waiting for purchase acceptance from {1}.\n" +
-                        "Details: {2}", buyerName, bestSellerName, bestOffer));
-                myAgent.send(order);
-                messageTemplate = MessageTemplate
-                        .and(MessageTemplate.MatchConversationId(CONVERSATION_ID),
-                                MessageTemplate.MatchInReplyTo(order.getReplyWith()));
-                currentBuyingStep = BuyingStages.CONFIRMING_PURCHASE;
-            } catch (final Exception ex) {
-                ex.printStackTrace();
-                currentBuyingStep = BuyingStages.ERROR;
-            }
-        }
-
-        private void getOffer() {
-            final ACLMessage searchReply = myAgent.receive(messageTemplate);
-            if (searchReply != null) {
-                if (matches(searchReply, ACLMessage.PROPOSE)) {
-                    try {
-                        final Car carProposal = (Car) searchReply.getContentObject();
-                        final BigDecimal price = createPrice(carProposal);
-                        if (bestSellerAid == null || price.compareTo(bestPrice) < 0) {
-                            bestPrice = price;
-                            bestSellerAid = searchReply.getSender();
-                            bestOffer = carProposal;
-                        }
-                    } catch (final Exception e) {
-                        e.printStackTrace();
-                    }
-
-                }
-                repliesCount++;
-                if (hasMoreRepliesThanSellers()) {
-                    currentBuyingStep = BuyingStages.REPLYING_TO_OFFERS;
-                }
             } else {
                 block();
             }
@@ -300,13 +296,13 @@ public class BuyerAgent extends Agent {
 
         @Override
         public boolean done() {
-            if (thereIsNoOffer()) {
+            if (isThereNoOffer()) {
                 buyRequest.setProcessing(false);
 
                 Printer.print(
                         getAID().getLocalName() + ": There is no car for given request:\n" + buyRequest.toString());
                 return true;
-            } else if (endedWithError()) {
+            } else if (isEndedWithError()) {
                 buyRequest.setProcessing(false);
                 return true;
             }
@@ -314,11 +310,11 @@ public class BuyerAgent extends Agent {
             return false;
         }
 
-        private boolean endedWithError() {
+        private boolean isEndedWithError() {
             return currentBuyingStep == BuyingStages.FINALIZING || currentBuyingStep == BuyingStages.ERROR;
         }
 
-        private boolean thereIsNoOffer() {
+        private boolean isThereNoOffer() {
             return currentBuyingStep == BuyingStages.REPLYING_TO_OFFERS && bestSellerAid == null;
         }
     }

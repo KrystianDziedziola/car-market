@@ -11,13 +11,14 @@ import jade.core.Runtime;
 import jade.wrapper.AgentContainer;
 import jade.wrapper.StaleProxyException;
 
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 public class Main {
 
-    private static final int NUMBER_OF_SELLER_AGENTS = 5;
+    private static final int NUMBER_OF_SELLER_AGENTS = 10;
 
     public static void main(final String[] args) throws Exception {
         final AgentContainer mainContainer = runApplication();
@@ -36,44 +37,32 @@ public class Main {
 
     private static void createBuyers(AgentContainer mainContainer) {
         final List<BuyRequest> buyer1Requests = Arrays.asList(
-                carRequestWithBrand(Brand.BMW),
-                carRequestWithBrand(Brand.VOLKSWAGEN),
-                carRequestWithBrand(Brand.MERCEDES)
+                carRequest(Brand.BMW, FuelType.GASOLINE, 10_000),
+                carRequest(Brand.VOLKSWAGEN, FuelType.GAS, 20_000),
+                carRequest(Brand.MERCEDES, FuelType.GAS, 15_000)
         );
 
         final List<BuyRequest> buyer2Requests = Arrays.asList(
-                carRequestWithEngineType(FuelType.GASOLINE),
-                carRequestWithEngineType(FuelType.GASOLINE),
-                carRequestWithEngineType(FuelType.DIESEL)
+                carRequest(Brand.AUDI, FuelType.GASOLINE, 55_000),
+                carRequest(Brand.TOYOTA, FuelType.GAS, 50_000),
+                carRequest(Brand.MERCEDES, FuelType.GAS, 15_000)
         );
 
         final List<BuyRequest> buyer3Requests = Arrays.asList(
-                carRequestWithBody(BodyType.HATCHBACK),
-                carRequestWithBody(BodyType.SUV),
-                carRequestWithBody(BodyType.SEDAN)
+                carRequest(Brand.HONDA, FuelType.DIESEL, 100_000),
+                carRequest(Brand.RENAULT, FuelType.GASOLINE, 55_000),
+                carRequest(Brand.MERCEDES, FuelType.DIESEL, 5_000)
         );
 
         createBuyers(mainContainer, Arrays.asList(buyer1Requests, buyer2Requests, buyer3Requests));
     }
 
-    private static BuyRequest carRequestWithBrand(Brand fiat) {
+    private static BuyRequest carRequest(Brand bmw, FuelType fuelType, int maxCost) {
         return BuyRequest
                 .builder()
-                .brands(Collections.singletonList(fiat))
-                .build();
-    }
-
-    private static BuyRequest carRequestWithEngineType(FuelType gasoline) {
-        return BuyRequest
-                .builder()
-                .fuelTypes(Collections.singletonList(gasoline))
-                .build();
-    }
-
-    private static BuyRequest carRequestWithBody(BodyType hatchback) {
-        return BuyRequest
-                .builder()
-                .bodyTypes(Collections.singletonList(hatchback))
+                .brands(Collections.singletonList(bmw))
+                .fuelTypes(Collections.singletonList(fuelType))
+                .maxCost(BigDecimal.valueOf(maxCost))
                 .build();
     }
 

@@ -31,8 +31,9 @@ public class CarSellerAgent extends Agent {
     private static final String RESERVED = "reserved";
     private static final String NOT_RESERVED = "not-reserved";
     private static final String ALREADY_RESERVED = "already-reserved";
-    public static final String SELLER_DESCRIPTION_TYPE = "cm.sellerServiceDescription";
-    public static final String SELLER_DESCRIPTION_NAME = "JADE-cm.car-trading";
+
+    private static final String SELLER_DESCRIPTION_TYPE = "cm.sellerServiceDescription";
+    private static final String SELLER_DESCRIPTION_NAME = "JADE-cm.car-trading";
 
     @Getter
     private List<Car> carsInOffer;
@@ -43,10 +44,13 @@ public class CarSellerAgent extends Agent {
     protected void setup() {
         try {
             carsInOffer = CarsGenerator.generate();
+            final String sellerName = getAID().getLocalName();
+
+            Printer.print(MessageFormat.format("{0}: offers: \n{1}\n\n", sellerName, carsInOffer));
             DFService.register(this, createAgentDescription());
 
             addBehaviour(new ChooseOfferBehaviour());
-            addBehaviour(new PurchaseBehaviour());
+            addBehaviour(new SellingBehaviour());
             addBehaviour(new ReserveBehaviour());
         } catch (final Exception e) {
             e.printStackTrace();
@@ -118,8 +122,8 @@ public class CarSellerAgent extends Agent {
             return carsInOffer
                     .stream()
                     .filter(doesNotMeetRequirements(request))
-                    .filter(isReservedByBuyer(buyerName)
-                    ).min(this::compareCost);
+                    .filter(isReservedByBuyer(buyerName))
+                    .min(this::compareCost);
         }
 
         private Predicate<Car> doesNotMeetRequirements(BuyRequest request) {
@@ -154,23 +158,19 @@ public class CarSellerAgent extends Agent {
                     return false;
                 }
 
-                if (car.getEngineCapacity() < minEngineCapacity
-                        || car.getEngineCapacity() > maxEngineCapacity) {
+                if (car.getEngineCapacity() < minEngineCapacity || car.getEngineCapacity() > maxEngineCapacity) {
                     return false;
                 }
 
-                if (car.getProductionYear() < minProductionYear
-                        || car.getProductionYear() > maxProductionYear) {
+                if (car.getProductionYear() < minProductionYear || car.getProductionYear() > maxProductionYear) {
                     return false;
                 }
 
-                if (car.getCost().compareTo(minCost) < 0
-                        || car.getCost().compareTo(maxCost) > 0) {
+                if (car.getCost().compareTo(minCost) < 0 || car.getCost().compareTo(maxCost) > 0) {
                     return false;
                 }
 
-                if (car.getAdditionalCost().compareTo(minAdditionalCost) < 0
-                        || car.getAdditionalCost().compareTo(maxAdditionalCost) > 0) {
+                if (car.getAdditionalCost().compareTo(minAdditionalCost) < 0 || car.getAdditionalCost().compareTo(maxAdditionalCost) > 0) {
                     return false;
                 }
 
@@ -191,7 +191,7 @@ public class CarSellerAgent extends Agent {
         }
     }
 
-    private class PurchaseBehaviour extends CyclicBehaviour {
+    private class SellingBehaviour extends CyclicBehaviour {
 
         @Override
         public void action() {
@@ -218,7 +218,7 @@ public class CarSellerAgent extends Agent {
                 } else {
                     if (carsInOffer.remove(car)) {
                         reply.setPerformative(ACLMessage.CONFIRM);
-                        Printer.print(MessageFormat.format("{0} sold a car to {1}.\n Details: {2}",
+                        Printer.print(MessageFormat.format("{0} sold a car to {1}.\n Details: {2}\n\n",
                                 sellerName, buyerName, car));
                     } else {
                         reply.setPerformative(ACLMessage.FAILURE);
@@ -262,7 +262,7 @@ public class CarSellerAgent extends Agent {
                     addBehaviour(new RemoveReservationBehaviour(getAgent(), reservation));
 
                     reply.setPerformative(ACLMessage.CONFIRM);
-                    Printer.print(MessageFormat.format("{0} reserved a card for buyer {1}.\n Details: {2}",
+                    Printer.print(MessageFormat.format("{0} reserved a card for buyer {1}.\n Details: {2}\n\n",
                             sellerName, buyerName, car));
                 } else if (reservationHandler.isAnyReserved(buyerName, car)) {
                     reply.setPerformative(ACLMessage.FAILURE);
@@ -279,7 +279,7 @@ public class CarSellerAgent extends Agent {
         }
 
         private int generateReservationTime() {
-            return new Random().nextInt(30000) + 15000;
+            return new Random().nextInt(10_000) + 10_000;
         }
     }
 

@@ -1,6 +1,7 @@
 package carmarket.car;
 
 import java.math.BigDecimal;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,24 +14,29 @@ public class CarsGenerator {
     public static List<Car> generate() {
         final List<Car> cars = new ArrayList<>();
 
-        createCars().forEach(carModel -> {
+        createParameters().forEach(carParameters -> {
             final BodyType bodyType = generateBodyType();
             final FuelType fuelType = generateFuelType();
-            final int productionYear = generateProductionYear(carModel);
-            final BigDecimal cost = generateCost(carModel.getMinCost(), carModel.getMaxCost());
-            final BigDecimal additionalCost = generateCost(carModel.getMinCost(), carModel.getMaxCost());
+            final String model = generateModel(carParameters.getBrand());
+            final int productionYear = generateProductionYear(carParameters);
+            final BigDecimal cost = generateCost(carParameters.getMinCost(), carParameters.getMaxCost());
+            final BigDecimal additionalCost = generateCost(carParameters.getMinCost(), carParameters.getMaxCost());
 
             cars.add(new Car(
-                    carModel.getBrand(),
-                    carModel.getModel(),
+                    carParameters.getBrand(),
+                    model,
                     bodyType,
                     fuelType,
-                    carModel.getEngineCapacity(),
+                    carParameters.getEngineCapacity(),
                     productionYear,
                     cost,
                     additionalCost));
         });
         return cars;
+    }
+
+    private static String generateModel(Brand brand) {
+        return MessageFormat.format("{0}-{1}", brand ,RANDOM.nextInt() % 100);
     }
 
     private static FuelType generateFuelType() {
@@ -43,9 +49,9 @@ public class CarsGenerator {
         return bodyTypes[RANDOM.nextInt(bodyTypes.length)];
     }
 
-    private static int generateProductionYear(CarModel carModel) {
-        return carModel.getMinProductionYear() +
-                RANDOM.nextInt(carModel.getMaxProductionYear() - carModel.getMinProductionYear());
+    private static int generateProductionYear(CarParameters carParameters) {
+        return carParameters.getMinProductionYear() +
+                RANDOM.nextInt(carParameters.getMaxProductionYear() - carParameters.getMinProductionYear());
     }
 
     private static BigDecimal generateCost(final BigDecimal min, final BigDecimal max) {
@@ -53,20 +59,50 @@ public class CarsGenerator {
         return randomBigDecimal.setScale(2, BigDecimal.ROUND_HALF_UP);
     }
 
-    private static List<CarModel> createCars() {
-        return Arrays.asList(new CarModel(Brand.BMW, "BMW-1234",
-                        704.0, 1991, 1998, BigDecimal.valueOf(1800), BigDecimal.valueOf(4200),
-                        BigDecimal.valueOf(0), BigDecimal.valueOf(500)),
+    private static List<CarParameters> createParameters() {
+        return Arrays.asList(
+                new CarParameters(Brand.BMW,
+                        1000.0,
+                        1990,
+                        2000,
+                        BigDecimal.valueOf(1800),
+                        BigDecimal.valueOf(4200),
+                        BigDecimal.valueOf(0),
+                        BigDecimal.valueOf(500)),
 
-                new CarModel(Brand.VOLKSWAGEN, "VOLKSVAGEN-1234",
-                        1595.0, 1999, 2006, BigDecimal.valueOf(4000),
+                new CarParameters(Brand.VOLKSWAGEN,
+                        2000.0,
+                        1999,
+                        2006,
+                        BigDecimal.valueOf(4000),
                         BigDecimal.valueOf(8000),
-                        BigDecimal.valueOf(0), BigDecimal.valueOf(1000)),
+                        BigDecimal.valueOf(0),
+                        BigDecimal.valueOf(1000)),
 
-                new CarModel(Brand.MERCEDES, "MERCEDES-1234",
-                        1781.0, 1998, 2006, BigDecimal.valueOf(9000),
+                new CarParameters(Brand.MERCEDES,
+                        1781.0,
+                        1998,
+                        2006,
+                        BigDecimal.valueOf(9000),
                         BigDecimal.valueOf(16000),
-                        BigDecimal.valueOf(300), BigDecimal.valueOf(1500))
+                        BigDecimal.valueOf(300),
+                        BigDecimal.valueOf(1500)),
+                new CarParameters(Brand.AUDI,
+                        1281.0,
+                        1990,
+                        2018,
+                        BigDecimal.valueOf(8000),
+                        BigDecimal.valueOf(16000),
+                        BigDecimal.valueOf(500),
+                        BigDecimal.valueOf(1500)),
+                new CarParameters(Brand.RENAULT,
+                        2281.0,
+                        1990,
+                        2018,
+                        BigDecimal.valueOf(6000),
+                        BigDecimal.valueOf(26000),
+                        BigDecimal.valueOf(100),
+                        BigDecimal.valueOf(2500))
         );
     }
 }
